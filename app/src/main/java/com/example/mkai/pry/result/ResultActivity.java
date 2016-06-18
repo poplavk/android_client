@@ -1,7 +1,9 @@
 package com.example.mkai.pry.result;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
@@ -12,7 +14,9 @@ import android.view.Display;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ListView;
+import android.widget.RelativeLayout;
 
 import com.example.mkai.pry.R;
 import com.example.mkai.pry.aleksey2093.GetFriendsLastResult;
@@ -23,6 +27,7 @@ import java.util.List;
 
 public class ResultActivity extends AppCompatActivity {
     final String LOG_TAG = "myLogs";
+    final ArrayList<PersonInfo> list = new ArrayList<PersonInfo>();
     List<PersonDescriptor> results = new ArrayList<PersonDescriptor>();
 
     @Override
@@ -32,15 +37,20 @@ public class ResultActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        //final ListView resultsListView = (ListView) findViewById(R.id.resultsListView);
+
+        final ListView resultsListView = (ListView) findViewById(R.id.resultsListView);
         // обрабатывает нажатие на пункт списка
-        /*subsListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        resultsListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             public void onItemClick(AdapterView<?> parent, View view,
                                     int position, long id) {
-                Log.d(LOG_TAG, " itemClick: position = " + position + ", id = "
+                Log.d(LOG_TAG, " itemClick: position************* = " + position + ", id = "
                         + id);
+
+                Uri address = Uri.parse("https://vk.com/" + list.get(position).link);
+                Intent openlinkIntent = new Intent(Intent.ACTION_VIEW, address);
+                startActivity(openlinkIntent);
             }
-        });*/
+        });
 /*
         //обрабатывает выделение пунктов списка (
         subsListView.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -102,6 +112,12 @@ public class ResultActivity extends AppCompatActivity {
                 final Context context = v.getContext();
                 updateListResult(context);
             }
+            //Открывает сслыку на страницу вк в браузере
+//            case R.id.result: {
+//                Uri address = Uri.parse("http://developer.alexanderklimov.ru");
+//                Intent openlinkIntent = new Intent(Intent.ACTION_VIEW, address);
+//                startActivity(openlinkIntent);
+//            }
             break;
         }
     }
@@ -124,7 +140,7 @@ public class ResultActivity extends AppCompatActivity {
         SharedPreferences sharedPreferences = getSharedPreferences("friendClick",MODE_PRIVATE);
         final GetFriendsLastResult getFriendsLastResult = new GetFriendsLastResult(this);
         final String login = sharedPreferences.getString("name","");
-        final ArrayList<PersonInfo> list = new ArrayList<PersonInfo>();
+//        list = new ArrayList<PersonInfo>();
         Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {

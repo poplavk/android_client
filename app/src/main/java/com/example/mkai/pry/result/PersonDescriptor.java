@@ -14,7 +14,10 @@ public class PersonDescriptor {
     private String photo;
     private String name;
     private String city;
+    private String country;
     private String birthday;
+    private String phone;
+    private String work;
 
    /* public PersonDescriptor() {
         name.setText("Вася Пупкин");
@@ -33,7 +36,10 @@ public class PersonDescriptor {
         photo = personInfo.image;
         name = personInfo.first_name + " " + personInfo.last_name;
         birthday = personInfo.birthday;
+        phone = personInfo.phone;
+        work = personInfo.occupation;
         city = personInfo.city;
+        country = personInfo.country;
     }
 
     public String getName() {
@@ -45,8 +51,14 @@ public class PersonDescriptor {
     public String getCity() {
         return city;
     }
-
+    public String getCountry() {
+        return country;
+    }
+    public String getWork() {
+        return work;
+    }
     public String getPhoto() {
         return photo;
     }
+    public String getPhone() {return phone; }
 }

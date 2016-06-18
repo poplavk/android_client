@@ -77,14 +77,22 @@ public class ResultAdapter extends BaseAdapter {
             v = mInflater.inflate(R.layout.result_item, null);
         }
         final ImageView ivPhoto = (ImageView) v.findViewById(R.id.photo);
-        final TextView tvName = (TextView) v.findViewById(R.id.name);
-        final TextView tvBirthday = (TextView) v.findViewById(R.id.birthday);
-        final TextView tvCity = (TextView) v.findViewById(R.id.city);
+        final TextView tvInfo = (TextView) v.findViewById(R.id.person_info);
+//        final TextView tvBirthday = (TextView) v.findViewById(R.id.birthday);
+//        final TextView tvCity = (TextView) v.findViewById(R.id.city);
+//        final TextView tvWork = (TextView) v.findViewById(R.id.work);
+//        final TextView tvPhone = (TextView) v.findViewById(R.id.phone);
 
         final String photo = items.get(position).getPhoto();
         final String name = items.get(position).getName();
         final String birthday = items.get(position).getBirthday();
-        final String city = items.get(position).getCity();
+        final String work = items.get(position).getWork();
+        final String phone = items.get(position).getPhone();
+        String city_str = new String();
+        if ((items.get(position).getCountry() != "") && (items.get(position).getCity() != ""))
+            city_str = items.get(position).getCountry() + ", " + items.get(position).getCity();
+
+        final String city = city_str;
 
         new Thread(new Runnable() {
             @Override
@@ -103,9 +111,30 @@ public class ResultAdapter extends BaseAdapter {
                 }
             }
         }).start();
-        tvName.setText(name);
-        tvBirthday.setText(birthday);
-        tvCity.setText(city);
+        String info_str = new String();
+        if (name != null && name != "")
+            info_str += name + "\n";
+        if (birthday != null && birthday != "")
+            info_str += birthday + "\n";
+        if (city != null && city != "")
+            info_str += city + "\n";
+        if (phone != null && phone != "")
+            info_str += phone + "\n";
+        if (work != null && work != "")
+            info_str += work + "\n";
+        tvInfo.setText(info_str);
+
+//        if (name == null || name == "")
+//            tvName.setVisibility(View.INVISIBLE);
+//        else
+//            tvName.setText(name);
+//        if (birthday == null || birthday == "")
+//            tvBirthday.setVisibility(View.INVISIBLE);
+//        else
+//            tvBirthday.setText(birthday);
+//        tvCity.setText(city);
+//        tvPhone.setText(phone);
+//        tvWork.setText(work);
         return v;
     }
 }
