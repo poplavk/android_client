@@ -1,8 +1,11 @@
 package com.example.mkai.pry.aleksey2093;
 
 import android.app.AlertDialog;
+import android.app.admin.SystemUpdatePolicy;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.view.Gravity;
+import android.widget.Toast;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -32,7 +35,7 @@ public class RequestFriendsList {
         if (res) {
             return listfrends;
         } else {
-            return new ArrayList<String>();
+            return null;
         }
     }
 
@@ -43,8 +46,10 @@ public class RequestFriendsList {
     private boolean downloadListFriends() {
         GiveMeSettings giveMeSettings = new GiveMeSettings();
         Socket socket = getSocket(giveMeSettings);
-        if (socket == null)
+        if (socket == null) {
+            errSocket = true;
             return false;
+        }
         try {
             DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
             DataInputStream inputStream = new DataInputStream(socket.getInputStream());
@@ -58,6 +63,25 @@ public class RequestFriendsList {
         }
     }
 
+    private boolean errAuth = false;
+
+    private boolean errSocket = false;
+
+    /**
+     * Возвращает информацию об ошибке авторизации
+     * @return ошибка(true), нет ошибки false
+     */
+    public boolean isErrAuth() {
+        return errAuth;
+    }
+
+    /**
+     * Возвращает информацию об ошибке сокета
+     * @return ошибка(true), нет ошибки false
+     */
+    public boolean isErrSocket() {
+        return errSocket;
+    }
 
     /**
      * Чтение сообщения полученного с сервера
@@ -66,19 +90,37 @@ public class RequestFriendsList {
      * @return true в случае успеха
      */
     private boolean readMsgFromServer(GiveMeSettings giveMeSettings, DataInputStream inputStream) {
-        int len = 0;
+        int len = 0, err = 0;
         byte[] msg = new byte[1];
         try {
+            System.out.println("Ожидание ответа на запрос списка подписок");
             while (len == 0) {
                 msg = new byte[inputStream.available()];
                 len = inputStream.read(msg);
+                if (err > 10)
+                    if (len == 0) {
+                        ShowDialogInfo.showToast("Список подписок не получен. Превышено время ожидания.",
+                                false, Gravity.CENTER);
+                        return false;
+                    } else
+                        break;
+                else
+                    try {
+                        err++;
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
             }
+            System.out.println("Получен ответ сервера на запрос списка подписок");
             msg = giveMeSettings.getDecryptMsg(msg); //дешифруем
-            if (msg[0] == (byte)-1) {
+            if (msg[0] == (byte) -1) {
                 System.out.println("Сообщение дешифровано неверно");
                 return false;
             } else if (msg[1] == (byte) 101) {
-                showDialogInformation("Ошибка авторизации", "Неправильный логин или пароль");
+                System.out.println("Список подписок. Ошибка авторизации. Неправильный логин или пароль");
+                ShowDialogInfo.showMsgBox("Ошибка авторизации", "Неправильный логин или пароль");
+                errAuth = true;
                 return false;
             } else if (msg[1] != (byte) 1) {
                 System.out.println("Получили неправильный ответ с сервера. Тип: " + msg[1]);
@@ -101,12 +143,14 @@ public class RequestFriendsList {
      * @return true в случае успеха
      */
     private boolean formationListFriends(byte[] msg, int len) {
-        int j = 3;
+        int j = 2;
+        ArrayList<String> stringArrayList = new ArrayList<>();
         if (len <= j) {
             System.out.println("Подписчиков нет");
-            return false;
+            ShowDialogInfo.showToast("Подписчиков нет",false,Gravity.CENTER);
+            listfrends = stringArrayList;
+            return true;
         }
-        ArrayList<String> stringArrayList = new ArrayList<String>();
         while (j < len) {
             /* ключ пока нигде не используется, поэтому просто будем собирать, но не хранить
             * как вариант можно выводить его в списке подписок и по клику отправлять его
@@ -165,7 +209,7 @@ public class RequestFriendsList {
             ex.printStackTrace();
             return false;
         }
-        System.out.println("Отправлено");
+        System.out.println("Отправлен запрос списка подписок");
         return true;
     }
 
@@ -178,39 +222,37 @@ public class RequestFriendsList {
         int err = 0;
         while (true) {
             try {
-                String server = giveMeSettings.getServerName(2);
-                int port = giveMeSettings.getServerPort(2);
-                Socket socket = null;
-                socket = new Socket(server, port);
-                return socket;
-            } catch (Exception ex) {
-                    err++;
-                    if (err > 9)
+                if (!giveMeSettings.isOnline()) {
+                    ShowDialogInfo.showToast("Отсутствуют подключение к интернету. " +
+                            "Список подписок загрузить невозможно",false,Gravity.CENTER);
+                    if (err > 5)
                         return null;
+                    err++;
                     try {
                         Thread.sleep(3000);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
+                }
+                String server = giveMeSettings.getServerName(2);
+                int port = giveMeSettings.getServerPort(2);
+                Socket socket = null;
+                socket = new Socket(server,port);
+                return socket;
+            } catch (Exception ex) {
+                err++;
+                if (err > 9) {
+                    ShowDialogInfo.showToast("Ошибка подключения. Проверьте подключение к интернету " +
+                            "и повторите попытку", false, Gravity.CENTER);
+                    return null;
+                }
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 System.err.println("Ошибка подключения " + ex.getMessage() + "\n" + ex.toString());
             }
         }
-    }
-
-    /**
-     * Вывод всплывающих окон на экран
-     */
-    private void showDialogInformation(String title, String text)
-    {
-        /*AlertDialog.Builder dlgAlert = new AlertDialog.Builder(context);
-        dlgAlert.setTitle(title);
-        dlgAlert.setMessage(text);
-        dlgAlert.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int whichButton) {
-                //finish();
-            }
-        });
-        dlgAlert.setCancelable(true);
-        dlgAlert.create().show();*/
     }
 }

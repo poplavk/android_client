@@ -4,16 +4,11 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.AssetManager;
 import android.content.res.Resources;
-import android.os.Build;
-
-import com.example.mkai.pry.encrypt.AES;
-import com.example.mkai.pry.encrypt.MD5;
-import com.example.mkai.pry.encrypt.RSA;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 
 import java.io.InputStream;
 import java.lang.String;
-import java.nio.ByteBuffer;
-import java.util.Objects;
 import java.util.Properties;
 
 
@@ -109,6 +104,33 @@ public class GiveMeSettings {
     }
 
     /**
+     * Получить логин и пароль, которые приложение заполнило, если их нет, то значения по умолчанию
+     * @param what логин (true), пароль (false)
+     * @return логин/пароль
+     */
+    public String getLpkString_Commit(boolean what) {
+        if (what) {
+            return preferences.getString("sys.login.commit",
+                    loadSettingFile().getProperty("sys.login"));
+        } else {
+            return preferences.getString("sys.pass.commit",
+                    loadSettingFile().getProperty("sys.pass"));
+        }
+    }
+
+    /**
+     * Сохранить логин и пароль, которые приложение заполмнило
+     * @param login логин
+     * @param password пароль
+     */
+    public void setLpkString_Commit(String login, String password) {
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putString("sys.login.commit", login);
+        editor.putString("sys.pass.commit", password);
+        editor.apply();
+    }
+
+    /**
      * Возвращает логин пользователя или пароль
      * @param what логин (true), пароль (false)
      * @return логин/пароль
@@ -116,10 +138,10 @@ public class GiveMeSettings {
     public String getLpkString(boolean what) {
         if (what) {
             return preferences.getString("sys.login",
-                    loadSettingFile().getProperty("sys.login"));
+                    "");//loadSettingFile().getProperty("sys.login"));
         } else {
             return preferences.getString("sys.pass",
-                    loadSettingFile().getProperty("sys.pass"));
+                    "");//loadSettingFile().getProperty("sys.pass"));
         }
     }
 
@@ -271,10 +293,10 @@ public class GiveMeSettings {
             byte encrypt_type = msg[0];
             byte[] tmp = new byte[msg.length-1];
             System.arraycopy(msg, 1, tmp, 0, tmp.length);
-            int len = "abcabcaabcabcabc".length();
             switch (encrypt_type) {
                 case 1:
-                    msg = new AES("abcabcaabcabcabc").encrypt(tmp);
+                    String key = loadSettingFile().getProperty("encrypt.AES.key");
+                    msg = new AES(key).encrypt(tmp);
                     break;
                 case 2:
                     msg = new RSA().encrypt(tmp);
@@ -303,13 +325,14 @@ public class GiveMeSettings {
     public byte[] getDecryptMsg(byte[] msg)
     {
         /*try {
-            byte bit = msg[0];
+            byte encrypt_type = msg[0];
             byte[] tmp = new byte[msg.length-1];
             System.arraycopy(msg, 1, tmp, 0, tmp.length);
-            switch (bit)
+            switch (encrypt_type)
             {
                 case 1:
-                    msg = new AES("abcabcaabcabcabc").decrypt(tmp);
+                    String key = loadSettingFile().getProperty("encrypt.AES.key");
+                    msg = new AES(key).decrypt(tmp);
                     break;
                 case 2:
                     msg = new RSA().decrypt(tmp);
@@ -328,5 +351,15 @@ public class GiveMeSettings {
             return new byte[] { -1 };
         }*/
         return msg;
+    }
+
+    /**
+     * Проверка на наличие подключения к Интернету
+     */
+    public static boolean isOnline() {
+        ConnectivityManager cm =
+                (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo netInfo = cm.getActiveNetworkInfo();
+        return netInfo != null && netInfo.isConnectedOrConnecting();
     }
 }

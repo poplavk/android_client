@@ -229,29 +229,15 @@ public class GetFriendsLastResult {
     private void showDialogInform(final int what, final String friend) {
         switch (what) {
             case 1:
-            {
-                Toast toast = Toast.makeText(context,
-                        "Неправильный логин или пароль",Toast.LENGTH_LONG);
-                toast.setGravity(Gravity.CENTER,0,0);
-                toast.show();
-            }
+                ShowDialogInfo.showToast("Неправильный логин или пароль",false,Gravity.CENTER);
                 break;
             case 2:
-            {
-                Toast toast = Toast.makeText(context,
-                        "Результат " + friend + " пуст.",Toast.LENGTH_LONG);
-                toast.setGravity(Gravity.CENTER,0,0);
-                toast.show();
-            }
+                ShowDialogInfo.showToast("Результат" + friend + " пуст", false, Gravity.CENTER);
                 break;
             case 3:
-            {
-                Toast toast = Toast.makeText(context,
-                        "Ошибка при подключении к серверу. Проверьте свое подключение к интернету и " +
-                                "повторите попытку.",Toast.LENGTH_LONG);
-                toast.setGravity(Gravity.CENTER,0,0);
-                toast.show();
-            }
+                ShowDialogInfo.showToast("Ошибка при подключении к серверу. " +
+                        "Проверьте свое подключение к интернету и повторите попытку.",
+                        false, Gravity.CENTER);
                 break;
         }
     }

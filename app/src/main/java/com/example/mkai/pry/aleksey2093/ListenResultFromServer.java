@@ -10,6 +10,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.support.v7.app.NotificationCompat;
+import android.support.v7.widget.ThemedSpinnerAdapter;
+import android.view.Gravity;
 
 import com.example.mkai.pry.suh.GetSomePrivateData;
 import com.example.mkai.pry.suh.PersonInfo;
@@ -51,6 +53,7 @@ public class ListenResultFromServer {
             public void run() {
                 int err = 0;
                 while (true) {
+                    System.out.println("Прослушка запущена");
                     listenServer();
                     try {
                         Thread.sleep(1000);
@@ -69,25 +72,37 @@ public class ListenResultFromServer {
      * Остановка потока текущего класса
      */
     public void stopListenThread() {
+        try {
+            serverSocket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        thread.interrupt();
         thread.stop();
     }
+
+    private static ServerSocket serverSocket;
 
     /**
      * Ожидание входящих подключений
      */
     private void listenServer() {
         GiveMeSettings giveMeSettings = new GiveMeSettings();
-        ServerSocket serversocket = getServerSocket(giveMeSettings);
-        if (serversocket == null)
+        serverSocket = getServerSocket(giveMeSettings);
+        if (serverSocket == null) {
+            System.out.println("Ошибка при создании сокета прослушки");
             return;
+        } else
+            System.out.println("Создан сокет прослушки");
         while (true) {
             try {
-                Socket socket = serversocket.accept();
-                startSocketNewAccept(giveMeSettings,socket);
+                Socket socket = serverSocket.accept();
+                System.out.println("Сокет прослушки получил новое соединение");
+                startSocketNewAccept(giveMeSettings, socket);
             } catch (IOException e) {
                 e.printStackTrace();
                 try {
-                    serversocket.close();
+                    serverSocket.close();
                 } catch (IOException e1) {
                     e1.printStackTrace();
                 }
@@ -105,7 +120,20 @@ public class ListenResultFromServer {
         int err = 0;
         while (true) {
             try {
-                return new ServerSocket(giveMeSettings.getServerPort(3));
+                if (GiveMeSettings.isOnline())
+                    return new ServerSocket(giveMeSettings.getServerPort(3));
+                else {
+                    if (err < 5)
+                        err++;
+                    else
+                        try {
+                            System.out.println("Ошибка подключения к интернету");
+                            ShowDialogInfo.showToast("Ошибка подключения к интернету",false, Gravity.CENTER);
+                            Thread.sleep(5000);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                }
             } catch (Exception ex) {
                 System.out.println("Не удалось создать сокет для прослушивания ответов с сервера. Ошибка: " +
                         ex.getMessage());
@@ -116,8 +144,8 @@ public class ListenResultFromServer {
                 }
                 err++;
                 if (err > 9) {
-                    System.out.println("Количество попыток подключения больше 9. " +
-                            "Проверьте настройки приложения.");
+                    System.out.println("Количество попыток создания сокета 9. " +
+                            "Проверьте настройки приложения и устройства.");
                     try {
                         Thread.sleep(10000);
                     } catch (InterruptedException e) {
@@ -139,13 +167,22 @@ public class ListenResultFromServer {
             DataInputStream inputStream = new DataInputStream(socket.getInputStream());
             int len = 0, err = 0;
             byte[] msg = new byte[0];
+            System.out.println("Прослушка ожидает входящее сообщение");
             while (len == 0) { //запускаем прослушку
                 msg = new byte[inputStream.available()];
                 len = inputStream.read(msg);
-                err++;
-                if (err > 100000)
+                if (err > 10) {
+                    System.out.println("Превышено время ожидания входящего сообщения");
                     return false;
+                } else
+                    try {
+                        err++;
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
             }
+            System.out.println("Прослушка получило новое сообщение от сервера");
             msgPostsProcessing(giveMeSettings,msg, len);
             return true;
         } catch (Exception ex) {
@@ -156,61 +193,22 @@ public class ListenResultFromServer {
     /**
      * Вызов диалоговых окно
      * @param what номер диалогового окна
-     * @param login имя подписчика
+     * @param friend имя подписчика
      * @param msg входящее сообщения с сервера
      * @param len длинна сообщения
      */
-    @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
-    private void getResDialogWindow(final int what, final String login, final byte[] msg, final int len) {
-        /*Platform.runLater(new Runnable() {
-            public void run() {
-                if (what == 1) {
-                    System.out.println("Посмотреть результат пользователя - " + login + "? (yes/no)");
-                    final Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-                    alert.setTitle("Пришел результат");
-                    alert.setHeaderText("У пользователя " + login + " новый результат");
-                    alert.setContentText("Хотите посмотреть на результат '" + login + "'?");
-                    Optional<ButtonType> result = alert.showAndWait();
-                    if (result.get() == ButtonType.OK) {
-                        System.out.println("Пользователь согласился посмотреть результат от " + login);
-                        formationListLinks(msg,len,login);
-                    } //else
-                        //return false;
-                } else if (what == 2) {
-                    System.out.println("Результат пользователя пуст");
-                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                    alert.setTitle("Информация");
-                    alert.setHeaderText("");
-                    alert.setContentText("Результат " + login + " пуст");
-                    alert.showAndWait();
-                    //return true;
-                } else if (what == 3) {
-                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                    alert.setTitle("Информация");
-                    alert.setHeaderText("Ошибка входа");
-                    alert.setContentText("Неправильный логин или пароль");
-                    alert.showAndWait();
-                    //return true;
-                }
-            }
-        });*/
-        if (what == 1) {
-            Intent notificationIntent = new Intent(context, Activity.class);
-            PendingIntent contentIntent = PendingIntent.getActivity(context,
-                    0, notificationIntent,
-                    PendingIntent.FLAG_CANCEL_CURRENT);
-            Notification.Builder builder = new Notification.Builder(context);
-            builder.setContentIntent(contentIntent)
-                    .setSmallIcon(android.R.drawable.stat_notify_chat)
-                    .setTicker("Последнее китайское предупреждение!")
-                    .setWhen(System.currentTimeMillis())
-                    .setAutoCancel(true)
-                    .setContentTitle("Напоминание")
-                    .setContentText("Пора покормить кота"); // Текст уведомления
-            Notification notification = builder.build();
-            NotificationManager notificationManager = (NotificationManager) context
-                    .getSystemService(Context.NOTIFICATION_SERVICE);
-            notificationManager.notify(101, notification);
+    private void getResDialogWindow(final int what, final String friend, final byte[] msg, final int len) {
+        switch (what) {
+            case 1:
+                ShowDialogInfo.showNotification("Новый результат в pry", "Уведомление",
+                        "Новый результат подписчка " + friend + ". Чтобы посмотреть результат откройте приложение");
+                break;
+            case 2:
+                System.out.println("Прослушкой получен пустой результат");
+                break;
+            case 3:
+                System.out.println("Неправильный логин или пароль");
+                break;
         }
     }
 
@@ -220,14 +218,13 @@ public class ListenResultFromServer {
      * @param msg входящее сообщние
      * @param len длинна сообщения
      */
-    private void msgPostsProcessing(GiveMeSettings giveMeSettings, byte[] msg, int len)
-    {
+    private void msgPostsProcessing(GiveMeSettings giveMeSettings, byte[] msg, int len) {
         msg = giveMeSettings.getDecryptMsg(msg);//дешифруем
-        if (msg[0] == (byte)-1) {
+        if (msg[0] == (byte) -1) {
             System.out.println("Сообщение дешифровано неверно");
-        } else if (msg[1] == (byte)102) {
+        } else if (msg[1] == (byte) 102) {
             System.out.println("Неправильный логин или пароль. Тип: " + msg[1]);
-            getResDialogWindow(3,null,null,-1);
+            getResDialogWindow(3, null, null, -1);
         } else if (msg[1] != 2) {
             System.out.println("Получили левое сообщение. Продолжаем прослушку.");
         } else if (msg[2] < 1) {
@@ -241,8 +238,7 @@ public class ListenResultFromServer {
                 //formationListLinks(msg,len,login);*/
                 //getResDialogWindow(1,login,msg,len); //окно уведомления о входящем результата
                 //mainFormController.getRadioButton(login);
-            }
-            catch (Exception ex) {
+            } catch (Exception ex) {
                 ex.printStackTrace();
             }
         }
